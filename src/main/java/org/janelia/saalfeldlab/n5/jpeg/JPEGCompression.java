@@ -41,7 +41,6 @@ import javax.imageio.ImageWriteParam;
 import javax.imageio.ImageWriter;
 
 import org.janelia.saalfeldlab.n5.Compression;
-import org.janelia.saalfeldlab.n5.Compression.CompressionParameter;
 import org.janelia.saalfeldlab.n5.Compression.CompressionType;
 import org.janelia.saalfeldlab.n5.DataBlock;
 import org.janelia.saalfeldlab.n5.DefaultBlockReader;
@@ -51,16 +50,16 @@ import org.janelia.saalfeldlab.n5.DefaultBlockWriter;
 public class JPEGCompression implements DefaultBlockReader, DefaultBlockWriter, Compression {
 
 	@CompressionParameter
-	private final float quality;
+	private final int quality;
 
-	public JPEGCompression(final float quality) {
+	public JPEGCompression(final int quality) {
 
 		this.quality = quality;
 	}
 
 	public JPEGCompression() {
 
-		this(1);
+		this(100);
 	}
 
 	@Override
@@ -106,7 +105,7 @@ public class JPEGCompression implements DefaultBlockReader, DefaultBlockWriter, 
 		final ImageWriter writer = ImageIO.getImageWritersByFormatName("jpg").next();
 		final ImageWriteParam param = writer.getDefaultWriteParam();
 		param.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
-		param.setCompressionQuality(quality);
+		param.setCompressionQuality(quality * 0.01f);
 
 		writer.setOutput(ImageIO.createImageOutputStream(out));
 		writer.write(null, new IIOImage(img, null,  null), param);

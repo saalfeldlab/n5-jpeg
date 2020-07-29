@@ -72,8 +72,8 @@ public class JPEGCompressionTest extends AbstractN5Test {
 
 		return new Compression[] {
 				new JPEGCompression(),
-				new JPEGCompression(0.97f),
-				new JPEGCompression(0.95f)
+				new JPEGCompression(97),
+				new JPEGCompression(95)
 			};
 	}
 
