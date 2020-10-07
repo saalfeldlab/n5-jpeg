@@ -46,9 +46,6 @@ import org.janelia.saalfeldlab.n5.Compression.CompressionType;
 import org.janelia.saalfeldlab.n5.DataBlock;
 import org.janelia.saalfeldlab.n5.DataType;
 
-import ij.ImagePlus;
-import ij.process.ByteProcessor;
-
 @CompressionType("jpeg")
 public class JPEGCompression implements BlockReader, BlockWriter, Compression {
 
@@ -82,7 +79,7 @@ public class JPEGCompression implements BlockReader, BlockWriter, Compression {
 		final BufferedImage img = ImageIO.read(in);
 		final byte[] bytes = ((DataBufferByte)img.getData().getDataBuffer()).getData();
 
-		new ImagePlus("", new ByteProcessor(dataBlock.getSize()[0], bytes.length / dataBlock.getSize()[0], bytes)).show();
+//		new ImagePlus("", new ByteProcessor(dataBlock.getSize()[0], bytes.length / dataBlock.getSize()[0], bytes)).show();
 
 		if (dataType == DataType.UINT8) {
 			final Object dataBlockData = dataBlock.getData();
