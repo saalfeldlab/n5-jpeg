@@ -11,7 +11,7 @@
 
 	<groupId>org.janelia.saalfeldlab</groupId>
 	<artifactId>n5-jpeg</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
+	<version>0.0.1-beta1</version>
 
 	<name>N5 JPEG compression</name>
 	<description>JPEG compression for N5</description>
