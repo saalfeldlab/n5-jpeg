@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 
 	<parent>
@@ -45,12 +47,14 @@
 		</developer>
 	</developers>
 	<contributors>
-                <contributor>
-                        <name>Stephan Saalfeld</name>
-                        <url>https://imagej.net/User:Saalfeld</url>
-                        <properties><id>axtimwalde</id></properties>
-                </contributor>
-        </contributors>
+		<contributor>
+			<name>Stephan Saalfeld</name>
+			<url>https://imagej.net/User:Saalfeld</url>
+			<properties>
+				<id>axtimwalde</id>
+			</properties>
+		</contributor>
+	</contributors>
 
 	<mailingLists>
 		<mailingList>
@@ -84,10 +88,15 @@
 
 		<!-- NB: Deploy releases to the SciJava Maven repository. -->
 		<releaseProfiles>deploy-to-scijava</releaseProfiles>
-		
+
 		<!-- TODO remove when pom-scijava-base is updated -->
-		<scijava.release.version>8</scijava.release.version>
+		<scijava.jvm.version>8</scijava.jvm.version>
 		<scijava.jvm.build.version>[1.8.0-101,)</scijava.jvm.build.version>
+
+		<maven-enforcer-plugin.version>3.0.0-M3</maven-enforcer-plugin.version>
+		<jacoco-maven-plugin.version>0.8.6</jacoco-maven-plugin.version>
+
+		<n5.version>2.4.0</n5.version>
 	</properties>
 
 	<dependencies>
@@ -114,13 +123,13 @@
 			<groupId>net.imglib2</groupId>
 			<artifactId>imglib2-ij</artifactId>
 		</dependency>
-                <dependency>
-                        <groupId>org.janelia.saalfeldlab</groupId>
-                        <artifactId>n5</artifactId>
-                        <version>${n5.version}</version>
-                        <classifier>tests</classifier>
-                        <scope>test</scope>
-                </dependency>
+		<dependency>
+			<groupId>org.janelia.saalfeldlab</groupId>
+			<artifactId>n5</artifactId>
+			<version>${n5.version}</version>
+			<classifier>tests</classifier>
+			<scope>test</scope>
+		</dependency>
 	</dependencies>
 
 	<repositories>
@@ -163,7 +172,7 @@
 				<jdk>[9,)</jdk>
 			</activation>
 			<properties>
-				<maven.compiler.release>${scijava.release.version}</maven.compiler.release>
+				<maven.compiler.release>${scijava.jvm.version}</maven.compiler.release>
 			</properties>
 		</profile>
 	</profiles>

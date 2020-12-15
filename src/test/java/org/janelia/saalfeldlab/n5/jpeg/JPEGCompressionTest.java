@@ -104,6 +104,10 @@ public class JPEGCompressionTest extends AbstractN5Test {
 
 	@Override
 	@Test
+	public void testWriteReadSerializableBlock() {}
+
+	@Override
+	@Test
 	public void testWriteReadByteBlock() {
 
 		final int[] tolerances = new int[] {1, 5, 10};
