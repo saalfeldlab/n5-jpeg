@@ -201,23 +201,32 @@ public class JPEGCompression implements BlockReader, BlockWriter, Compression {
 		case UINT8:
 		case INT8:
 			final byte[] byteData = (byte[])dataBlock.getData();
-			for (int i = 0; i < bytes.length; ++i) {
-				bytes[i] = map(byteData[i]);
-			}
+			if (dataType == DataType.UINT8)
+				for (int i = 0; i < bytes.length; ++i)
+					bytes[i] = map(byteData[i] & 0xff);
+			else
+				for (int i = 0; i < bytes.length; ++i)
+					bytes[i] = map(byteData[i]);
 		break;
 		case UINT16:
 		case INT16:
 			final short[] shortData = (short[])dataBlock.getData();
-			for (int i = 0; i < bytes.length; ++i) {
-				bytes[i] = map(shortData[i]);
-			}
+			if (dataType == DataType.UINT16)
+				for (int i = 0; i < bytes.length; ++i)
+					bytes[i] = map(shortData[i] & 0xffff);
+			else
+				for (int i = 0; i < bytes.length; ++i)
+					bytes[i] = map(shortData[i]);
 		break;
 		case UINT32:
 		case INT32:
 			final int[] intData = (int[])dataBlock.getData();
-			for (int i = 0; i < bytes.length; ++i) {
-				bytes[i] = map(intData[i]);
-			}
+			if (dataType == DataType.UINT32)
+				for (int i = 0; i < bytes.length; ++i)
+					bytes[i] = map(intData[i] & 0xffffffffL);
+			else
+				for (int i = 0; i < bytes.length; ++i)
+					bytes[i] = map(intData[i]);
 		break;
 		case UINT64:
 		case INT64:
