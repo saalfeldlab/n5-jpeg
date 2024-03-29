@@ -25,9 +25,11 @@
  */
 package org.janelia.saalfeldlab.n5.jpeg;
 
-import static org.junit.Assert.fail;
-
+import java.io.File;
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.nio.file.Files;
 import java.util.Random;
 
 import org.janelia.saalfeldlab.n5.AbstractN5Test;
@@ -36,10 +38,14 @@ import org.janelia.saalfeldlab.n5.Compression;
 import org.janelia.saalfeldlab.n5.DataBlock;
 import org.janelia.saalfeldlab.n5.DataType;
 import org.janelia.saalfeldlab.n5.DatasetAttributes;
+import org.janelia.saalfeldlab.n5.N5FSReader;
 import org.janelia.saalfeldlab.n5.N5FSWriter;
+import org.janelia.saalfeldlab.n5.N5Reader;
 import org.janelia.saalfeldlab.n5.N5Writer;
 import org.junit.Assert;
 import org.junit.Test;
+
+import com.google.gson.GsonBuilder;
 
 /**
  * Lazy {@link BloscCompression} test using the abstract base class.
@@ -48,7 +54,35 @@ import org.junit.Test;
  */
 public class JPEGCompressionTest extends AbstractN5Test {
 
-	static private String testDirPath = System.getProperty("user.home") + "/tmp/n5-test";
+	@Override
+	protected N5Reader createN5Reader(final String location, final GsonBuilder gson) throws IOException, URISyntaxException {
+
+		return new N5FSReader(location, gson);
+	}
+
+	@Override
+	protected N5Writer createN5Writer(final String location, final GsonBuilder gson) throws IOException, URISyntaxException {
+
+		return new N5FSWriter(location, gson);
+	}
+
+	@Override
+	protected String tempN5Location() throws URISyntaxException {
+
+		final String basePath = new File(tempN5PathName()).toURI().normalize().getPath();
+		return new URI("file", null, basePath, null).toString();
+	}
+
+	private static String tempN5PathName() {
+
+		try {
+			final File tmpFile = Files.createTempDirectory("n5-test-").toFile();
+			tmpFile.deleteOnExit();
+			return tmpFile.getCanonicalPath();
+		} catch (final Exception e) {
+			throw new RuntimeException(e);
+		}
+	}
 
 	static protected byte[] byteBlock;
 	{
@@ -58,13 +92,15 @@ public class JPEGCompressionTest extends AbstractN5Test {
 	}
 
 
-	/**
-	 * @throws IOException
-	 */
-	@Override
-	protected N5Writer createN5Writer() throws IOException {
+	@Override protected N5Writer createN5Writer() throws IOException, URISyntaxException {
 
-		return new N5FSWriter(testDirPath);
+		return new N5FSWriter(tempN5Location(), new GsonBuilder()) {
+			@Override public void close() {
+
+				super.close();
+				remove();
+			}
+		};
 	}
 
 	@Override
@@ -108,18 +144,20 @@ public class JPEGCompressionTest extends AbstractN5Test {
 
 	@Override
 	@Test
-	public void testWriteReadByteBlock() {
+	public void testWriteReadByteBlock() throws URISyntaxException {
 
-		final int[] tolerances = new int[] {1, 5, 10};
+		try (N5Writer n5 = createN5Writer()) {
 
-		int i = 0;
-		for (final Compression compression : getCompressions()) {
-			for (final DataType dataType : new DataType[]{
-					DataType.UINT8,
-					DataType.INT8}) {
+			final int[] tolerances = new int[] {1, 5, 10};
 
-				System.out.println("Testing " + compression.getType() + " " + dataType);
-				try {
+			int i = 0;
+			for (final Compression compression : getCompressions()) {
+				for (final DataType dataType : new DataType[]{
+						DataType.UINT8,
+						DataType.INT8}) {
+
+					System.out.println("Testing " + compression.getType() + " " + dataType);
+
 					n5.createDataset(datasetName, dimensions, blockSize, dataType, compression);
 					final DatasetAttributes attributes = n5.getDatasetAttributes(datasetName);
 					final ByteArrayDataBlock dataBlock = new ByteArrayDataBlock(blockSize, new long[]{0, 0, 0}, byteBlock);
@@ -131,12 +169,11 @@ public class JPEGCompressionTest extends AbstractN5Test {
 
 					Assert.assertTrue(n5.remove(datasetName));
 
-				} catch (final IOException e) {
-					e.printStackTrace();
-					fail("Block cannot be written.");
 				}
+				++i;
 			}
-			++i;
+		} catch (final IOException e) {
+			Assert.fail(e.getMessage());
 		}
 	}
 
