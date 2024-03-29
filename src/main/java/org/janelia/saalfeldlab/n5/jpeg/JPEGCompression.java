@@ -60,11 +60,9 @@ public class JPEGCompression implements BlockReader, BlockWriter, Compression {
 
 	@CompressionParameter
 	private final double max;
-	private final double range;
 
 	@CompressionParameter
 	private final double gamma;
-	private final double invGamma;
 
 
 	public JPEGCompression(
@@ -78,9 +76,7 @@ public class JPEGCompression implements BlockReader, BlockWriter, Compression {
 		this.dataType = dataType;
 		this.min = min;
 		this.max = max;
-		range = max - min;
 		this.gamma = gamma;
-		invGamma = 1.0 / gamma;
 	}
 
 	public JPEGCompression(final int quality) {
@@ -93,12 +89,12 @@ public class JPEGCompression implements BlockReader, BlockWriter, Compression {
 		this(100);
 	}
 
-	private final byte map(final double value) {
+	private static final byte map(final double value, final double min, final double range, final double gamma) {
 
 		return (byte)Math.min(255, Math.max(0, Math.round(Math.pow((value - min) / range, gamma) * 255)));
 	}
 
-	private final double mapInv(final byte value) {
+	private static final double mapInv(final byte value, final double min, final double range, final double invGamma) {
 
 		return Math.pow((value & 0xff) / 255.0, invGamma) * range + min;
 	}
@@ -124,8 +120,12 @@ public class JPEGCompression implements BlockReader, BlockWriter, Compression {
 		if (dataType == DataType.UINT8 && min == 0 && max == 255 && gamma == 1 && dataBlockData instanceof byte[]) {
 			final byte[] data = (byte[])dataBlockData;
 			System.arraycopy(bytes, 0, data, 0, data.length);
+			System.out.println("trivial copy");
 			return;
 		}
+
+		final double range = max - min;
+		final double invGamma = 1.0 / gamma;
 
 		switch (dataType) {
 		case UINT8:
@@ -133,50 +133,50 @@ public class JPEGCompression implements BlockReader, BlockWriter, Compression {
 			final byte[] byteData = (byte[])dataBlockData;
 			if (dataType == DataType.UINT8)
 				for (int i = 0; i < byteData.length; ++i)
-					byteData[i] = (byte)clip(mapInv(bytes[i]), 0, 0xff);
+					byteData[i] = (byte)clip(mapInv(bytes[i], min, range, invGamma), 0, 0xff);
 			else
 				for (int i = 0; i < byteData.length; ++i)
-					byteData[i] = (byte)clip(mapInv(bytes[i]), Byte.MIN_VALUE, Byte.MAX_VALUE);
+					byteData[i] = (byte)clip(mapInv(bytes[i], min, range, invGamma), Byte.MIN_VALUE, Byte.MAX_VALUE);
 			break;
 		case UINT16:
 		case INT16:
 			final short[] shortData = (short[])dataBlockData;
 			if (dataType == DataType.UINT16)
 				for (int i = 0; i < shortData.length; ++i)
-					shortData[i] = (short)clip(mapInv(bytes[i]), 0, 0xffff);
+					shortData[i] = (short)clip(mapInv(bytes[i], min, range, invGamma), 0, 0xffff);
 			else
 				for (int i = 0; i < shortData.length; ++i)
-					shortData[i] = (short)clip(mapInv(bytes[i]), Short.MIN_VALUE, Short.MAX_VALUE);
+					shortData[i] = (short)clip(mapInv(bytes[i], min, range, invGamma), Short.MIN_VALUE, Short.MAX_VALUE);
 			break;
 		case UINT32:
 		case INT32:
 			final int[] intData = (int[])dataBlockData;
 			if (dataType == DataType.UINT32)
 				for (int i = 0; i < intData.length; ++i)
-					intData[i] = (int)clip(mapInv(bytes[i]), 0, 0xffffffffL);
+					intData[i] = (int)clip(mapInv(bytes[i], min, range, invGamma), 0, 0xffffffffL);
 			else
 				for (int i = 0; i < intData.length; ++i)
-					intData[i] = (short)clip(mapInv(bytes[i]), Integer.MIN_VALUE, Integer.MAX_VALUE);
+					intData[i] = (short)clip(mapInv(bytes[i], min, range, invGamma), Integer.MIN_VALUE, Integer.MAX_VALUE);
 			break;
 		case UINT64:
 		case INT64:
 			final long[] longData = (long[])dataBlockData;
 			if (dataType == DataType.UINT64)
 				for (int i = 0; i < longData.length; ++i)
-					longData[i] = (long)clip(mapInv(bytes[i]), 0, 1.8446744073709552E19);
+					longData[i] = (long)clip(mapInv(bytes[i], min, range, invGamma), 0, 1.8446744073709552E19);
 			else
 				for (int i = 0; i < longData.length; ++i)
-					longData[i] = (short)clip(mapInv(bytes[i]), Long.MIN_VALUE, Long.MAX_VALUE);
+					longData[i] = (short)clip(mapInv(bytes[i], min, range, invGamma), Long.MIN_VALUE, Long.MAX_VALUE);
 			break;
 		case FLOAT32:
 			final float[] floatData = (float[])dataBlockData;
 			for (int i = 0; i < floatData.length; ++i)
-				floatData[i] = (float)mapInv(bytes[i]);
+				floatData[i] = (float)mapInv(bytes[i], min, range, invGamma);
 			break;
 		case FLOAT64:
 			final double[] doubleData = (double[])dataBlockData;
 			for (int i = 0; i < doubleData.length; ++i)
-				doubleData[i] = mapInv(bytes[i]);
+				doubleData[i] = mapInv(bytes[i], min, range, invGamma);
 			break;
 		default:
 			/* default reader applies no min, max, gamma mapping and just reads the decompressed bytes */
@@ -197,54 +197,56 @@ public class JPEGCompression implements BlockReader, BlockWriter, Compression {
 
 		byte[] bytes = new byte[dataBlock.getNumElements()];
 
+		final double range = max - min;
+
 		switch (dataType) {
 		case UINT8:
 		case INT8:
 			final byte[] byteData = (byte[])dataBlock.getData();
 			if (dataType == DataType.UINT8)
 				for (int i = 0; i < bytes.length; ++i)
-					bytes[i] = map(byteData[i] & 0xff);
+					bytes[i] = map(byteData[i] & 0xff, min, range, gamma);
 			else
 				for (int i = 0; i < bytes.length; ++i)
-					bytes[i] = map(byteData[i]);
+					bytes[i] = map(byteData[i], min, range, gamma);
 		break;
 		case UINT16:
 		case INT16:
 			final short[] shortData = (short[])dataBlock.getData();
 			if (dataType == DataType.UINT16)
 				for (int i = 0; i < bytes.length; ++i)
-					bytes[i] = map(shortData[i] & 0xffff);
+					bytes[i] = map(shortData[i] & 0xffff, min, range, gamma);
 			else
 				for (int i = 0; i < bytes.length; ++i)
-					bytes[i] = map(shortData[i]);
+					bytes[i] = map(shortData[i], min, range, gamma);
 		break;
 		case UINT32:
 		case INT32:
 			final int[] intData = (int[])dataBlock.getData();
 			if (dataType == DataType.UINT32)
 				for (int i = 0; i < bytes.length; ++i)
-					bytes[i] = map(intData[i] & 0xffffffffL);
+					bytes[i] = map(intData[i] & 0xffffffffL, min, range, gamma);
 			else
 				for (int i = 0; i < bytes.length; ++i)
-					bytes[i] = map(intData[i]);
+					bytes[i] = map(intData[i], min, range, gamma);
 		break;
 		case UINT64:
 		case INT64:
 			final long[] longData = (long[])dataBlock.getData();
 			for (int i = 0; i < bytes.length; ++i) {
-				bytes[i] = map(longData[i]);
+				bytes[i] = map(longData[i], min, range, gamma);
 			}
 		break;
 		case FLOAT32:
 			final float[] floatData = (float[])dataBlock.getData();
 			for (int i = 0; i < bytes.length; ++i) {
-				bytes[i] = map(floatData[i]);
+				bytes[i] = map(floatData[i], min, range, gamma);
 			}
 		break;
 		case FLOAT64:
 			final double[] doubleData = (double[])dataBlock.getData();
 			for (int i = 0; i < bytes.length; ++i) {
-				bytes[i] = map(doubleData[i]);
+				bytes[i] = map(doubleData[i], min, range, gamma);
 			}
 		break;
 		default:

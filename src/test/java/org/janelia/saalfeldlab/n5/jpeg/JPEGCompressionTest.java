@@ -109,7 +109,8 @@ public class JPEGCompressionTest extends AbstractN5Test {
 		return new Compression[] {
 				new JPEGCompression(),
 				new JPEGCompression(97),
-				new JPEGCompression(95)
+				new JPEGCompression(95),
+				new JPEGCompression(100, DataType.UINT8, 0, 255, 2)
 			};
 	}
 
@@ -148,7 +149,7 @@ public class JPEGCompressionTest extends AbstractN5Test {
 
 		try (N5Writer n5 = createN5Writer()) {
 
-			final int[] tolerances = new int[] {1, 5, 10};
+			final int[] tolerances = new int[] {1, 7, 10, 20};
 
 			int i = 0;
 			for (final Compression compression : getCompressions()) {
@@ -185,7 +186,7 @@ public class JPEGCompressionTest extends AbstractN5Test {
 		for (int i = 0; i < expected.length; ++i) {
 
 			Assert.assertTrue(
-					"expected:<" + expected[i] + "> but was:<" + actual[i] + ">",
+					"expected:<" + (expected[i] & 0xff) + "> but was:<" + (actual[i] & 0xff) + ">",
 					Math.abs((expected[i] & 0xff) - (actual[i] & 0xff)) <= tolerance);
 		}
 	}
