@@ -42,6 +42,7 @@ import org.janelia.saalfeldlab.n5.N5FSReader;
 import org.janelia.saalfeldlab.n5.N5FSWriter;
 import org.janelia.saalfeldlab.n5.N5Reader;
 import org.janelia.saalfeldlab.n5.N5Writer;
+import org.janelia.saalfeldlab.n5.ShortArrayDataBlock;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -91,6 +92,14 @@ public class JPEGCompressionTest extends AbstractN5Test {
 		rnd.nextBytes(byteBlock);
 	}
 
+	static protected short[] shortBlock;
+	{
+		final Random rnd = new Random();
+		shortBlock = new short[blockSize[0] * blockSize[1] * blockSize[2]];
+		for (int i = 0; i < shortBlock.length; ++i)
+			shortBlock[i] = (short)rnd.nextInt();
+	}
+
 
 	@Override protected N5Writer createN5Writer() throws IOException, URISyntaxException {
 
@@ -104,19 +113,42 @@ public class JPEGCompressionTest extends AbstractN5Test {
 	}
 
 	@Override
-	protected Compression[] getCompressions() {
-
-		return new Compression[] {
-				new JPEGCompression(),
-				new JPEGCompression(97),
-				new JPEGCompression(95),
-				new JPEGCompression(100, DataType.UINT8, 0, 255, 2)
-			};
-	}
-
-	@Override
 	@Test
-	public void testWriteReadShortBlock() {}
+	public void testWriteReadShortBlock() throws URISyntaxException {
+
+		try (N5Writer n5 = createN5Writer()) {
+
+			final int[] tolerances = new int[] {512};
+
+			final Compression[] compressions = new Compression[] {
+					new JPEGCompression(100, DataType.UINT16, 0, 65535, 1)
+				};
+
+			int i = 0;
+			for (final Compression compression : compressions) {
+				for (final DataType dataType : new DataType[]{
+						DataType.UINT16}) {
+
+					System.out.println("Testing " + compression.getType() + " " + dataType);
+
+					n5.createDataset(datasetName, dimensions, blockSize, dataType, compression);
+					final DatasetAttributes attributes = n5.getDatasetAttributes(datasetName);
+					final ShortArrayDataBlock dataBlock = new ShortArrayDataBlock(blockSize, new long[]{0, 0, 0}, shortBlock);
+					n5.writeBlock(datasetName, attributes, dataBlock);
+
+					final DataBlock<?> loadedDataBlock = n5.readBlock(datasetName, attributes, new long[]{0, 0, 0});
+
+					unsignedShortArrayEqualsApproximately(shortBlock, (short[])loadedDataBlock.getData(), tolerances[i]);
+
+					Assert.assertTrue(n5.remove(datasetName));
+
+				}
+				++i;
+			}
+		} catch (final IOException e) {
+			Assert.fail(e.getMessage());
+		}
+	}
 
 	@Override
 	@Test
@@ -151,8 +183,15 @@ public class JPEGCompressionTest extends AbstractN5Test {
 
 			final int[] tolerances = new int[] {1, 7, 10, 20};
 
+			final Compression[] compressions = new Compression[] {
+					new JPEGCompression(),
+					new JPEGCompression(97),
+					new JPEGCompression(95),
+					new JPEGCompression(100, DataType.UINT8, 0, 255, 2)
+				};
+
 			int i = 0;
-			for (final Compression compression : getCompressions()) {
+			for (final Compression compression : compressions) {
 				for (final DataType dataType : new DataType[]{
 						DataType.UINT8,
 						DataType.INT8}) {
@@ -188,6 +227,19 @@ public class JPEGCompressionTest extends AbstractN5Test {
 			Assert.assertTrue(
 					"expected:<" + (expected[i] & 0xff) + "> but was:<" + (actual[i] & 0xff) + ">",
 					Math.abs((expected[i] & 0xff) - (actual[i] & 0xff)) <= tolerance);
+		}
+	}
+
+	protected void unsignedShortArrayEqualsApproximately(
+			final short[] expected,
+			final short[] actual,
+			final int tolerance) {
+
+		for (int i = 0; i < expected.length; ++i) {
+
+			Assert.assertTrue(
+					"expected:<" + (expected[i] & 0xffff) + "> but was:<" + (actual[i] & 0xffff) + ">",
+					Math.abs((expected[i] & 0xffff) - (actual[i] & 0xffff)) <= tolerance);
 		}
 	}
 }
